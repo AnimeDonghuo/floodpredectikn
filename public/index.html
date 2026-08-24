@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JIO SHIELD — Flood Warning & Risk Intelligence System</title>
+  
+  <!-- CSS Assets -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #030712; /* Slate-950 */
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Warning status styles */
+    .border-pulsing {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      animation: pulse-border 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse-border {
+      to {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+      }
+    }
+    /* Scrollbars custom design */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white" x-data="shieldDashboard()">
+
+  <!-- SYSTEM TOP HEADER -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 py-4 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Brand Logo Graphic -->
+        <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-extrabold text-white text-xl tracking-tighter shadow-md shadow-blue-500/20">
+          JS
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight">JIO SHIELD</h1>
+            <span class="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Intelligence Node</span>
+          </div>
+          <p class="text-xs text-slate-400 font-medium">Real-Time Flood Advance Warning & Risk Intelligence System</p>
+        </div>
+      </div>
+
+      <!-- SYSTEM LIVE RUNTIME COUNTERS -->
+      <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-300">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-950 border border-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>SYSTEM ONLINE</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-500 font-medium">CLOCK:</span>
+          <span class="mono text-slate-300" x-text="liveClock">--:--:--</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-500 font-medium">REFRESH ENGINE:</span>
+          <span class="mono text-blue-400" x-text="timerCountdown + 's'">60s</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BANNER WARNING CRITICAL EMERGENCY STATE -->
+  <div x-show="activeData.riskLevel === 'CRITICAL'" class="bg-red-600 border-y border-red-700 text-white font-bold px-6 py-2.5 flex items-center gap-3 animate-pulse text-sm justify-center">
+    <svg class="w-5 h-5 animate-bounce shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    <span>CRITICAL EMERGENCY ALERT: MULTIPLE FLOOD BASIN ANOMALIES TRIGGERED. LOCAL EVACUATION ORDERS IN EFFECT.</span>
+  </div>
+
+  <!-- MAIN WRAPPER CONTAINER -->
+  <main class="max-w-7xl mx-auto p-4 md:p-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- LEFT PANEL - CONTROLS & SELECTIONS -->
+    <section class="lg:col-span-4 flex flex-col gap-6">
+      
+      <!-- HACKATHON DEMO MODULE CONSOLE -->
+      <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg relative overflow-hidden" 
+           :class="demoMode ? 'border-amber-500/40 bg-slate-900/80 shadow-amber-950/20' : ''">
+        
+        <!-- Status indicator corner overlay -->
+        <div x-show="demoMode" class="absolute top-0 right-0 bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase px-2.5 py-1 tracking-wider rounded-bl">
+          DEMO ACTIVE
+        </div>
+
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+          <span>🎬 HACKATHON PRESENTATION CONTROLLER</span>
+        </h3>
+        
+        <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+          Launch a simulated dynamic monsoon flash-flood event cycle in real-time. This feature guarantees an uninterrupted live demonstration of risk escalation and emergency triggers.
+        </p>
+
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-2">
+            <button @click="toggleDemo(true)" 
+                    :class="demoMode ? 'bg-amber-500 text-slate-950 hover:bg-amber-400' : 'bg-slate-800 text-white hover:bg-slate-700'"
+                    class="flex-1 py-2 px-3 rounded font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 transition">
+              <span class="w-2 h-2 rounded-full bg-red-600 animate-ping" x-show="demoMode"></span>
+              <span x-text="demoMode ? 'RUNNING DEMO' : '🎬 START PRESENTATION'"></span>
+            </button>
+            
+            <button @click="toggleDemo(false)" 
+                    class="py-2 px-3 rounded font-bold text-xs uppercase tracking-wide bg-slate-800 hover:bg-slate-700 transition"
+                    title="Pause Scenario">
+              PAUSE
+            </button>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="resetDemo()" 
+                    class="flex-1 py-2 px-2.5 rounded font-bold text-xs uppercase bg-slate-800 hover:bg-slate-700 transition">
+              RESET TO NORMAL BASELINE
+            </button>
+            <button @click="accelerateDemo()" 
+                    class="py-2 px-3 rounded font-bold text-xs uppercase bg-slate-800 hover:bg-slate-700 transition"
+                    title="Toggle speed: 2s / 4s">
+              ⚡ SPEED: <span x-text="demoSpeed === 2000 ? '2s' : '4s'"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGES TRACKER -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80" x-show="demoMode">
+          <div class="flex justify-between text-[11px] font-semibold text-slate-400 mb-2">
+            <span>SCENARIO TIMELINE</span>
+            <span class="mono text-amber-400 font-bold" x-text="'STAGE ' + (demoStep === 0 ? 5 : demoStep) + ' / 5'"></span>
+          </div>
+          <div class="grid grid-cols-5 gap-1.5">
+            <template x-for="idx in [1, 2, 3, 4, 5]">
+              <div class="h-1.5 rounded-full" 
+                   :class="idx <= demoStep || (demoStep === 0 && idx === 5) ? 'bg-amber-500 shadow shadow-amber-500/20' : 'bg-slate-800'"></div>
+            </template>
+          </div>
+          <p class="text-[11px] mt-2 font-bold text-amber-400 mono italic" x-text="getDemoStageLabel()"></p>
+        </div>
+      </div>
+
+      <!-- GEOGRAPHIC TARGET SELECTION -->
+      <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">🛰️ MONITORING SENSORS</h3>
+        
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-semibold text-slate-400 mb-1">Target Basin Station</label>
+          <div class="relative">
+            <select x-model="selectedLocation" @change="changeLocation()" 
+                    class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-sm text-slate-100 font-bold focus:outline-none focus:border-blue-500">
+              <template x-for="loc in locations" :key="loc.name">
+                <option :value="loc.name" x-text="loc.name"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+
+        <!-- Coordinates metadata block -->
+        <div class="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold text-slate-400 border-t border-slate-800/80 pt-3">
+          <div>
+            <span class="block text-[10px] text-slate-500 uppercase">Station Lat</span>
+            <span class="mono text-slate-300" x-text="activeData.latitude + '° N'"></span>
+          </div>
+          <div>
+            <span class="block text-[10px] text-slate-500 uppercase">Station Lon</span>
+            <span class="mono text-slate-300" x-text="activeData.longitude + '° E'"></span>
+          </div>
+          <div class="col-span-2 mt-1">
+            <span class="block text-[10px] text-slate-500 uppercase">Local Basin</span>
+            <span class="text-blue-400" x-text="activeData.riverName"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYSTEM HEALTH & DATA SOURCE STATUS PANEL -->
+      <div class="p-5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3">📡 SYSTEM STATUS DIAGNOSTICS</h3>
+        
+        <div class="flex flex-col gap-2 text-xs">
+          <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+            <span class="text-slate-400 font-medium">WEATHER API (Open-Meteo)</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold" 
+                  :class="apiStatus.weather === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'"
+                  x-text="apiStatus.weather"></span>
+          </div>
+          <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+            <span class="text-slate-400 font-medium">HISTORICAL CLIMATE ENGINE</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ONLINE</span>
+          </div>
+          <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+            <span class="text-slate-400 font-medium">RIVER HYDROLOGY SYSTEM</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold" 
+                  :class="activeData.dataSource === 'SIMULATED' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'"
+                  x-text="activeData.dataSource === 'SIMULATED' ? 'SIMULATED DEMO' : 'ESTIMATED FALLBACK'"></span>
+          </div>
+          <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+            <span class="text-slate-400 font-medium">DATABASE (MongoDB)</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold" 
+                  :class="apiStatus.dbConnected ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'"
+                  x-text="apiStatus.dbConnected ? 'CONNECTED' : 'LOCAL CACHE'"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL - COMPREHENSIVE INTELLIGENCE -->
+    <section class="lg:col-span-8 flex flex-col gap-6">
+
+      <!-- FLOOD RISK HERO GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- RISK INDEX SPEEDOMETER & LEVEL (7 Cols) -->
+        <div class="md:col-span-7 p-6 rounded-xl border bg-slate-900/60 shadow-lg flex flex-col justify-between transition-colors duration-300"
+             :class="getRiskBorderClass()">
+          
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Flood Risk Index</span>
+              <h2 class="text-xs text-slate-500 mt-1 font-semibold">Normalized Rule-Based Hazard Index (0-100)</h2>
+            </div>
+            <!-- Dynamic Source Badge -->
+            <span class="px-2.5 py-1 rounded text-[10px] font-black tracking-widest uppercase border"
+                  :class="getSourceBadgeClass()" x-text="activeData.dataSource + ' DATA'"></span>
+          </div>
+
+          <div class="flex items-center gap-6 my-4">
+            <!-- Risk score display -->
+            <div class="relative flex items-center justify-center shrink-0">
+              <svg class="w-28 h-28 transform -rotate-90">
+                <circle cx="56" cy="56" r="48" stroke-width="8" stroke="#1e293b" fill="transparent" />
+                <circle cx="56" cy="56" r="48" stroke-width="8" :stroke="getRiskColor()" fill="transparent"
+                        :stroke-dasharray="301.6" :stroke-dashoffset="301.6 - (301.6 * activeData.riskScore) / 100"
+                        class="transition-all duration-500 ease-out" />
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span class="text-3xl font-extrabold tracking-tighter mono text-white" x-text="activeData.riskScore">--</span>
+                <span class="text-[9px] font-black uppercase text-slate-500 tracking-wider">INDEX</span>
+              </div>
+            </div>
+
+            <!-- Warning guidance text -->
+            <div>
+              <span class="text-2xl font-black uppercase tracking-tight" :class="'text-' + getRiskColorName() + '-400'" x-text="activeData.riskLevel">--</span>
+              <p class="text-xs text-slate-300 font-semibold mt-1.5 leading-relaxed" x-text="activeData.guidance">...</p>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800/80 pt-4 grid grid-cols-2 gap-4 mt-2">
+            <div>
+              <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Prediction Confidence</span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-sm font-extrabold tracking-tight text-white" x-text="activeData.confidence + '%'">--</span>
+                <span class="text-[10px] text-slate-400 font-semibold">(Freshness & Completion)</span>
+              </div>
+            </div>
+            <div>
+              <span class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Prediction Method</span>
+              <span class="text-xs font-semibold text-slate-300 mt-1 block">Hybrid Risk Matrix Engine</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CURRENT WEATHER SENSORS HERO CARD (5 Cols) -->
+        <div class="md:col-span-5 p-6 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-4">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Sensor Observations</span>
+              <span class="mono text-xs font-bold text-slate-500" x-text="getFormattedTime(activeData.timestamp)">14:32</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">PRECIPITATION</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-2xl font-extrabold tracking-tight text-white" x-text="activeData.rainfall_24h">--</span>
+                  <span class="text-xs font-bold text-slate-400">mm</span>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">TEMP / HUMID</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-lg font-bold tracking-tight text-white" x-text="activeData.temperature + '°C'">--</span>
+                  <span class="text-xs text-slate-500" x-text="'/ ' + activeData.humidity + '%'"></span>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">FORECAST 24h</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-xl font-extrabold tracking-tight text-blue-400" x-text="activeData.forecast_24h">--</span>
+                  <span class="text-xs font-semibold text-slate-400">mm</span>
+                </div>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">RIVER HEIGHT</span>
+                <div class="flex items-baseline gap-1 mt-1">
+                  <span class="text-xl font-extrabold tracking-tight" :class="activeData.waterLevel > 5.0 ? 'text-rose-500' : 'text-slate-200'" x-text="activeData.waterLevel">--</span>
+                  <span class="text-xs font-bold text-slate-400">m</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800/80 pt-4 mt-4 flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-semibold flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Water Trend:
+            </span>
+            <span class="mono font-bold" 
+                  :class="activeData.waterLevelChange >= 0.2 ? 'text-red-400' : 'text-slate-400'"
+                  x-text="activeData.waterLevelChange >= 0 ? '+' + activeData.waterLevelChange + ' m/h' : activeData.waterLevelChange + ' m/h'">+0.02 m/h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAP SECTION & AI EXPLANABILITY GRID -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- GIS SPATIAL ANALYSIS MAP (7 Cols) -->
+        <div class="md:col-span-7 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg p-5 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">GIS SPATIAL THREAT ANALYSIS</span>
+            <span class="text-[10px] font-bold text-slate-500">Powered by CartoDB & OpenStreetMap</span>
+          </div>
+          
+          <div id="map" class="h-64 w-full rounded-lg border border-slate-800/80 relative bg-slate-950">
+            <!-- Loading indicator layer overlay -->
+            <div x-show="loading" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-40">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>
+                <span class="text-xs text-slate-400 font-bold uppercase tracking-widest">SENSORS LOADING...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPLAINABLE AI REASONING PANEL (5 Cols) -->
+        <div class="md:col-span-5 p-5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg flex flex-col justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">AI Flood Intelligence</span>
+            <p class="text-xs text-slate-300 font-medium mb-4 leading-relaxed">
+              Diagnostic attribution of calculated risk metrics using independent analytical weights:
+            </p>
+
+            <div class="flex flex-col gap-3">
+              <template x-for="exp in activeData.explanations" :key="exp.name">
+                <div>
+                  <div class="flex justify-between text-[11px] font-bold mb-1">
+                    <span class="text-slate-400" x-text="exp.name">Intensity</span>
+                    <span class="mono" :class="exp.impact === 'HIGH' ? 'text-red-400' : exp.impact === 'MEDIUM' ? 'text-amber-400' : 'text-slate-400'" x-text="exp.value + '%'"></span>
+                  </div>
+                  <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500" 
+                         :class="exp.impact === 'HIGH' ? 'bg-red-500' : exp.impact === 'MEDIUM' ? 'bg-amber-500' : 'bg-blue-500'"
+                         :style="'width: ' + exp.value + '%'"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800/80 pt-3 mt-4 text-[10px] text-slate-500 italic font-medium leading-relaxed">
+            *Risk Index represents calculated environmental metrics. Avoid direct replacement of official local warning dispatch networks.
+          </div>
+        </div>
+      </div>
+
+      <!-- ADVANCE TIMELINE HAZARD PREDICTION -->
+      <div class="p-6 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">🔮 24-HOUR EARLY WARNING RISK HORIZON</h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <template x-for="step in activeData.timeline" :key="step.label">
+            <div class="p-3.5 rounded-lg bg-slate-950 border border-slate-800/80 text-center flex flex-col justify-between items-center transition hover:border-slate-700">
+              <span class="text-[10px] font-extrabold tracking-wider text-slate-500" x-text="step.label">NOW</span>
+              
+              <div class="my-2.5 flex flex-col items-center">
+                <span class="text-xl font-black mono text-white" x-text="step.score">--</span>
+                <span class="text-[9px] font-bold uppercase tracking-wide text-slate-400 mt-1" x-text="step.forecastRain + ' mm'"></span>
+              </div>
+
+              <!-- Mini risk label colored -->
+              <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border"
+                    :class="getTimelineBadgeClass(step.score)" x-text="getTimelineLevelLabel(step.score)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- CHARTS SECTION & REAL-TIME SYSTEM LOGS -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <!-- FLOOD WARNING HISTORY CHART (7 Cols) -->
+        <div class="md:col-span-7 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg p-5">
+          <div class="flex justify-between items-center mb-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">FLOOD THREAT RISK HISTORY GRAPH</span>
+            <span class="text-[10px] font-semibold text-slate-500">Real-Time Analytical Trends</span>
+          </div>
+
+          <div class="h-60 relative w-full bg-slate-950/40 rounded border border-slate-800/40 flex items-center justify-center p-2">
+            <canvas id="riskTrendChart" class="w-full h-full"></canvas>
+          </div>
+        </div>
+
+        <!-- REAL-TIME LOG STREAM (5 Cols) -->
+        <div class="md:col-span-5 p-5 rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">🖥️ LIVE RISK PIPELINE STREAMS</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+            
+            <div class="bg-slate-950 rounded-lg p-3 border border-slate-800/80 h-52 overflow-y-auto flex flex-col gap-2">
+              <template x-for="log in systemLogs">
+                <div class="text-[10px] mono border-b border-slate-900/60 pb-1">
+                  <div class="flex justify-between text-slate-500 mb-0.5">
+                    <span x-text="getFormattedTime(log.timestamp)"></span>
+                    <span :class="getLogLevelClass(log.level)" x-text="'[' + log.level.toUpperCase() + ']'"></span>
+                  </div>
+                  <p class="text-slate-300 font-semibold" x-text="log.message"></p>
+                </div>
+              </template>
+            </div>
+          </div>
+          <p class="text-[9px] text-slate-500 italic mt-2 text-center">Pipeline stream updates instantly on sensor recalculation events.</p>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- APP FOOTER -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-8 px-6 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="text-left">
+        <h4 class="font-extrabold text-slate-400 tracking-tight">JIO SHIELD</h4>
+        <p class="mt-1 font-medium">Real-Time Flood Advance Warning & Risk Intelligence System</p>
+      </div>
+      <div class="text-right text-[11px] font-medium leading-relaxed max-w-md">
+        Powered by public open data sources. Risk Index is an analytical indicator, not an official municipal flood warning dispatch. For life-threatening emergencies, follow local official government advisories.
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT LIBRARIES -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+  <!-- DASHBOARD APPLICATION CODE logic -->
+  <script>
+    function shieldDashboard() {
+      return {
+        // Global reactive states
+        selectedLocation: 'Jamshedpur',
+        locations: [],
+        activeData: {
+          location: '',
+          riskScore: 0,
+          riskLevel: 'LOW',
+          dataSource: 'LIVE',
+          timestamp: new Date().toISOString(),
+          timeline: []
+        },
+        systemLogs: [],
+        apiStatus: {
+          weather: 'ONLINE',
+          dbConnected: false
+        },
+        demoMode: false,
+        demoStep: 0,
+        demoSpeed: 4000,
+        timerCountdown: 60,
+        liveClock: '',
+        loading: false,
+
+        // Leaflet GIS Mapping
+        map: null,
+        markerCircle: null,
+
+        // Chart.js handles
+        trendChart: null,
+        chartDataHistory: {
+          labels: [],
+          scores: []
+        },
+
+        init() {
+          this.initClock();
+          this.initGISMap();
+          this.initTrendChart();
+          this.fetchLocations().then(() => {
+            this.syncState();
+          });
+
+          // Fetch state countdown
+          setInterval(() => {
+            if (this.timerCountdown > 0) {
+              this.timerCountdown--;
+            } else {
+              this.syncState();
+              this.timerCountdown = 60;
+            }
+          }, 1000);
+        },
+
+        initClock() {
+          setInterval(() => {
+            const now = new Date();
+            this.liveClock = now.toLocaleTimeString('en-US', { hour12: false });
+          }, 1000);
+        },
+
+        initGISMap() {
+          // Default center coordinates
+          this.map = L.map('map', { zoomControl: false }).setView([22.8046, 86.2029], 6);
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© CartoDB'
+          }).addTo(this.map);
+        },
+
+        initTrendChart() {
+          const ctx = document.getElementById('riskTrendChart').getContext('2d');
+          
+          // Seed initial dynamic chart timeline visualizer data points
+          this.chartDataHistory.labels = ['-20h', '-16h', '-12h', '-8h', '-4h', 'NOW'];
+          this.chartDataHistory.scores = [12, 14, 18, 15, 20, 18];
+
+          this.trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: this.chartDataHistory.labels,
+              datasets: [{
+                label: 'Risk Score Trend',
+                data: this.chartDataHistory.scores,
+                borderColor: '#3b82f6',
+                borderWidth: 2,
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#64748b', font: { family: 'JetBrains Mono' } }
+                },
+                y: {
+                  min: 0,
+                  max: 100,
+                  grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                  ticks: { color: '#64748b', font: { family: 'JetBrains Mono' } }
+                }
+              }
+            }
+          });
+        },
+
+        async fetchLocations() {
+          try {
+            const res = await fetch('/api/locations');
+            const data = await res.json();
+            this.locations = data;
+          } catch (e) {
+            console.error("Error fetching locations standard configurations", e);
+          }
+        },
+
+        async syncState() {
+          this.loading = true;
+          try {
+            const apiBase = '';
+            
+            // Fetch Diagnostics & Active Logs
+            const healthRes = await fetch(`${apiBase}/api/health`);
+            const health = await healthRes.json();
+            this.apiStatus.dbConnected = health.dbConnected;
+            this.demoMode = health.demoActive;
+
+            const logsRes = await fetch(`${apiBase}/api/logs`);
+            this.systemLogs = await logsRes.json();
+
+            // Fetch Active location data risk outputs
+            const riskRes = await fetch(`${apiBase}/api/risk/${this.selectedLocation}`);
+            const riskData = await riskRes.json();
+            this.activeData = riskData;
+
+            // Sync simulation stages
+            if (this.demoMode) {
+              const currentDemoLog = this.systemLogs.find(l => l.message.includes('[DEMO TICK]'));
+              if (currentDemoLog) {
+                const stepStr = currentDemoLog.message.split(' -> ')[1] || '';
+                if (stepStr.includes('Stage 1')) this.demoStep = 1;
+                else if (stepStr.includes('Stage 2')) this.demoStep = 2;
+                else if (stepStr.includes('Stage 3')) this.demoStep = 3;
+                else if (stepStr.includes('Stage 4')) this.demoStep = 4;
+                else if (stepStr.includes('Stage 5')) this.demoStep = 5;
+              }
+            } else {
+              this.demoStep = 0;
+            }
+
+            // Move Map Viewport to coordinates
+            if (this.map) {
+              this.map.setView([riskData.latitude, riskData.longitude], 9);
+              if (this.markerCircle) {
+                this.map.removeLayer(this.markerCircle);
+              }
+              // Render threat visual radius relative to hazard percentage risk indexes
+              const threatRadius = 3000 + (riskData.riskScore * 100);
+              const colorHex = this.getRiskColor();
+              
+              this.markerCircle = L.circle([riskData.latitude, riskData.longitude], {
+                color: colorHex,
+                fillColor: colorHex,
+                fillOpacity: 0.3,
+                radius: threatRadius
+              }).addTo(this.map);
+              
+              this.markerCircle.bindPopup(`
+                <div class="text-slate-900 font-sans p-1">
+                  <h4 class="font-extrabold text-sm tracking-tight">${riskData.location} Monitoring Station</h4>
+                  <p class="text-xs font-semibold text-slate-500 mt-0.5">Hydrology System: ${riskData.riverName}</p>
+                  <hr class="my-1.5 border-slate-200">
+                  <div class="flex justify-between items-center gap-4 text-xs font-bold">
+                    <span>Active Hazard Index</span>
+                    <span class="mono" style="color:${colorHex}">${riskData.riskScore}/100</span>
+                  </div>
+                </div>
+              `);
+            }
+
+            // Update Dynamic Historical Charts trends lists
+            this.updateTrendGraph(riskData.riskScore);
+
+          } catch (e) {
+            console.error("Critical error inside synchronizer loops", e);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        updateTrendGraph(newScore) {
+          if (!this.trendChart) return;
+          
+          let labels = [...this.chartDataHistory.labels];
+          let scores = [...this.chartDataHistory.scores];
+
+          if (scores.length >= 10) {
+            labels.shift();
+            scores.shift();
+          }
+
+          const offsetTime = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+          labels.push(offsetTime);
+          scores.push(newScore);
+
+          this.chartDataHistory.labels = labels;
+          this.chartDataHistory.scores = scores;
+
+          this.trendChart.data.labels = labels;
+          this.trendChart.data.datasets[0].data = scores;
+          
+          // Color update dynamically
+          this.trendChart.data.datasets[0].borderColor = this.getRiskColor();
+          this.trendChart.data.datasets[0].backgroundColor = this.getRiskColor() + '1A'; // opacity hex 1A (10%)
+          this.trendChart.update();
+        },
+
+        async toggleDemo(start) {
+          const url = start ? '/api/demo/start' : '/api/demo/stop';
+          await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ location: this.selectedLocation })
+          });
+          this.demoMode = start;
+          await this.syncState();
+        },
+
+        async resetDemo() {
+          await fetch('/api/demo/reset', { method: 'POST' });
+          this.demoMode = false;
+          this.demoStep = 0;
+          await this.syncState();
+        },
+
+        async accelerateDemo() {
+          this.demoSpeed = this.demoSpeed === 4000 ? 2000 : 4000;
+          await fetch('/api/demo/speed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ speedMs: this.demoSpeed })
+          });
+          await this.syncState();
+        },
+
+        getDemoStageLabel() {
+          if (this.demoStep === 1) return "Stage 1: Dynamic monsoon cycle begins. Rainfall recorded.";
+          if (this.demoStep === 2) return "Stage 2: Rainfall intensifies, cross matching historical averages.";
+          if (this.demoStep === 3) return "Stage 3: Subarnarekha River levels display surging rate of rise.";
+          if (this.demoStep === 4) return "Stage 4: Basin saturation maximum. Critical alerts active.";
+          if (this.demoStep === 5 || (this.demoStep === 0 && this.demoMode)) return "Stage 5: Flash Flood state triggered! Move to higher grounds.";
+          return "Engine Monitoring Baseline Inputs.";
+        },
+
+        async changeLocation() {
+          this.timerCountdown = 60;
+          if (this.demoMode) {
+            // Re-trigger simulation for newly selected city context
+            await this.toggleDemo(true);
+          }
+          await this.syncState();
+        },
+
+        // Helper style color engines
+        getRiskColor() {
+          const s = this.activeData.riskScore;
+          if (s > 80) return '#ef4444'; // red-500
+          if (s > 60) return '#f97316'; // orange-500
+          if (s > 40) return '#f59e0b'; // amber-500
+          if (s > 20) return '#eab308'; // yellow-500
+          return '#10b981'; // emerald-500
+        },
+
+        getRiskColorName() {
+          const s = this.activeData.riskScore;
+          if (s > 80) return 'red';
+          if (s > 60) return 'orange';
+          if (s > 40) return 'amber';
+          if (s > 20) return 'yellow';
+          return 'emerald';
+        },
+
+        getRiskBorderClass() {
+          const s = this.activeData.riskScore;
+          if (s > 80) return 'border-red-500 border-pulsing';
+          if (s > 60) return 'border-orange-500/80';
+          if (s > 40) return 'border-amber-500/60';
+          return 'border-slate-800';
+        },
+
+        getSourceBadgeClass() {
+          const src = this.activeData.dataSource;
+          if (src === 'SIMULATED') return 'bg-purple-950/40 text-purple-400 border-purple-500/30';
+          if (src === 'LIVE') return 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30';
+          if (src === 'CACHED') return 'bg-blue-950/40 text-blue-400 border-blue-500/30';
+          return 'bg-amber-950/40 text-amber-400 border-amber-500/30';
+        },
+
+        getTimelineBadgeClass(score) {
+          if (score > 80) return 'bg-red-950/40 text-red-400 border-red-500/20';
+          if (score > 60) return 'bg-orange-950/40 text-orange-400 border-orange-500/20';
+          if (score > 40) return 'bg-amber-950/40 text-amber-400 border-amber-500/20';
+          return 'bg-slate-900 text-slate-400 border-slate-800';
+        },
+
+        getTimelineLevelLabel(score) {
+          if (score > 80) return 'CRITICAL';
+          if (score > 60) return 'V. HIGH';
+          if (score > 40) return 'HIGH';
+          if (score > 20) return 'MODERATE';
+          return 'LOW';
+        },
+
+        getLogLevelClass(level) {
+          if (level === 'success') return 'text-emerald-400';
+          if (level === 'warn') return 'text-amber-400';
+          if (level === 'error') return 'text-rose-400';
+          return 'text-blue-400';
+        },
+
+        getFormattedTime(isoString) {
+          try {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('en-US', { hour12: false });
+          } catch(e) {
+            return '--:--';
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
